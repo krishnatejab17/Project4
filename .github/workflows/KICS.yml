@@ -15,13 +15,13 @@ jobs:
       # Download & install KICS correctly
       - name: Install KICS
         run: |
-          # Download the latest Linux binary release (NOT the API JSON)
-          curl -sLO https://github.com/Checkmarx/kics/releases/latest/download/kics_linux_amd64.tar.gz
+          # Get latest version tag
+          KICS_VERSION=$(curl -s https://api.github.com/repos/Checkmarx/kics/releases/latest | grep tag_name | cut -d '"' -f 4)
+          echo "Latest version: $KICS_VERSION"
 
-          # Extract the binary
-          tar -xzf kics_linux_amd64.tar.gz
-
-          # Move it to PATH
+          # Download the raw binary (not tar.gz)
+          curl -sL "https://github.com/Checkmarx/kics/releases/download/$KICS_VERSION/kics_linux_x64" -o kics
+          chmod +x kics
           sudo mv kics /usr/local/bin/kics
 
           # Verify install
@@ -35,7 +35,7 @@ jobs:
             --report-formats sarif \
             --output-path kics-results
 
-      # Upload SARIF to GitHub Security
+      # Upload SARIF to GitHub Security tab
       - name: Upload SARIF
         uses: github/codeql-action/upload-sarif@v3
         with:
