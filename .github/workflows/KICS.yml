@@ -7,24 +7,27 @@ on:
 
 permissions:
   contents: read
-  security-events: write   # Required to upload SARIF
+  security-events: write
 
 jobs:
   kics-scan:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Install KICS
-      - name: Install KICS
+      # Download latest KICS release
+      - name: Download KICS
         run: |
-          curl -sfL https://raw.githubusercontent.com/Checkmarx/kics/master/install.sh | sh
+          KICS_VERSION=$(curl -s https://api.github.com/repos/Checkmarx/kics/releases/latest | grep tag_name | cut -d '"' -f 4)
+          echo "Latest version: $KICS_VERSION"
+          curl -sL "https://github.com/Checkmarx/kics/releases/download/$KICS_VERSION/kics_$KICS_VERSION_linux_x64.tar.gz" -o kics.tar.gz
+          tar -xzf kics.tar.gz
           sudo mv kics /usr/local/bin/kics
+          kics version
 
-      # 3. Run KICS scan (SARIF output)
+      # Run KICS scan
       - name: Run KICS Scan
         run: |
           mkdir -p kics-results
@@ -33,7 +36,7 @@ jobs:
             --report-formats sarif \
             --output-path kics-results
 
-      # 4. Upload SARIF to GitHub Security tab
+      # Upload SARIF results
       - name: Upload SARIF results
         uses: github/codeql-action/upload-sarif@v3
         with:
