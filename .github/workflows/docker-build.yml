@@ -31,3 +31,4 @@
 #           push: true
 #           tags: krishnatejab17/project1:${{ github.sha }}
       
+#commented out above code and added below code to push docker image to ECR instead of DockerHub
