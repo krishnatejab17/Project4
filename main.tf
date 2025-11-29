@@ -2,43 +2,6 @@ provider "aws" {
   region = "us-east-1"
 }
 
-resource "aws_ecr_repository" "project1" {
-  name = "project1-repo"
-  image_tag_mutability = "IMMUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-    
-  }
-}
-
-
-#delete untagged images policy (https://www.linkedin.com/pulse/how-upload-docker-images-aws-ecr-using-terraform-hendrix-roa/)
-
-resource "aws_ecr_lifecycle_policy" "default_policy" {
-  repository = aws_ecr_repository.project1.name
-  policy     = <<EOF
-  {
-    "rules": [
-      {
-        "rulePriority": 1,
-        "description": "Expire untagged images after 30 days",
-        "selection": {
-          "tagStatus": "untagged",
-          "countType": "sinceImagePushed",
-          "countUnit": "days",
-          "countNumber": 30
-        },
-        "action": {
-          "type": "expire"
-        }
-      }
-    ]
-  }
-  EOF
-}
-
-
 # OIDC Identity Provider for GitHub Actions
 resource "aws_iam_openid_connect_provider" "github" {
   url             = "https://token.actions.githubusercontent.com"
@@ -72,16 +35,69 @@ resource "aws_iam_role" "github_actions_role" {
 EOF
 }
 
-
-resource "aws_iam_role" "ecs_task_execution_role" {
-  name = "ecsTaskExecutionRole"
-  assume_role_policy = data.aws_iam_policy_document.ecs_task_assume.json
-}
-#above data block is in data.tf
-
-resource "aws_iam_role_policy_attachment" "ecs_task_execution_attach" {
-  role       = aws_iam_role.ecs_task_execution_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+#ECS cluster 
+resource "aws_ecs_cluster" "project1_cluster" {
+  name = "project1-ecs-cluster"
 }
 
+#ECS Task Definition
+resource "aws_ecs_task_definition" "project1_task" {
+  family                   = "project1-task-definition"
+  cpu                      = "256"
+  memory                   = "512"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
 
+  container_definitions = jsonencode([
+    {
+      name      = "project1-container"
+      image     = "${aws_ecr_repository.project1.repository_url}:${var.image_tag}"
+      cpu       = 256
+      memory    = 512
+      essential = true
+      portMappings = [
+        {
+          containerPort = 80
+          hostPort      = 80
+        }
+      ]
+    }
+  ])
+}
+
+resource "aws_ecs_service" "project1_service" {
+  name            = "project1-service"
+  cluster         = aws_ecs_cluster.project1_cluster.id
+  task_definition = aws_ecs_task_definition.project1_task.arn
+  launch_type     = "FARGATE"
+  desired_count   = 1
+
+  network_configuration {
+    subnets         = data.aws_subnets.default_subnets.ids
+    security_groups = [aws_security_group.project1_ecs_sg.id]
+    assign_public_ip = true
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.project1_tg.arn
+    container_name   = "project1-container"
+    container_port   = 80
+  }
+
+  depends_on = [
+    aws_lb_listener.project1_listener,
+    aws_iam_role.ecs_task_execution_role
+  ]
+}
+
+resource "aws_lb_listener" "project1_listener" {
+  load_balancer_arn = aws_lb.project1_alb.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.project1_tg.arn
+  }
+}
