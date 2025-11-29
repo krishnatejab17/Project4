@@ -4,11 +4,13 @@ on:
   push:
     branches:
       - main
+
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: project1-repo
-  IMAGE_TAG: ${{ github.sha }}-test
-  TF_VAR_image_tag: ${{ github.sha }}-test
+  IMAGE_TAG: ${{ github.sha }}
+  LATEST_TAG: latest
+  TF_VAR_image_tag: ${{ github.sha }}
 
 jobs:
   build-and-push:
@@ -37,7 +39,10 @@ jobs:
           docker build -t ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} .
           docker tag ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} \
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          docker tag ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} \
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.LATEST_TAG }}
 
       - name: Push Docker image to ECR
-        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-      
+        run: |
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.LATEST_TAG }}
