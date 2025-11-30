@@ -35,6 +35,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       # --- 1. AWS Authentication (using OIDC, which is great) ---
       - name: Configure AWS credentials (OIDC)
@@ -62,6 +64,16 @@ jobs:
       # --- 4. Push Docker Image to ECR ---
       - name: Push Docker Image to ECR
         run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+
+      - name: Debug Paths
+        run: |
+          echo "PWD:"
+          pwd
+          echo "Root directory contents:"
+          ls -la
+          echo "Terraform directory contents:"
+          ls -la Terraform || echo "Terraform folder NOT found!"
 
       # --- 5. Deploy with Terraform ---
       # Setup Terraform environment
