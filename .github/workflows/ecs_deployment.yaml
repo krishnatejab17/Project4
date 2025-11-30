@@ -1,18 +1,14 @@
-# This workflow is triggered on every push to the 'main' branch.
-
 name: Deploy to Amazon ECS
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch: # Allows manual trigger for testing
+  workflow_dispatch:
 
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: project1-repo-development-ecr
-  # Note: The variables below are primarily for reference/consistency. 
-  # Deployment is driven by the Terraform configuration.
   ECS_SERVICE: project1-repo-development-ecs-service
   ECS_CLUSTER: project1-repo-development-cluster
   ECS_TASK_DEFINITION: project1-repo-development-task-definition
@@ -24,12 +20,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
 
-    # Define the image tag using the sequential workflow run number
     env:
       IMAGE_TAG: build-${{ github.run_number }}
-    
+
     permissions:
-      id-token: write # Required for OIDC
+      id-token: write
       contents: read
 
     steps:
@@ -38,33 +33,25 @@ jobs:
         with:
           fetch-depth: 0
 
-      # --- 1. AWS Authentication (using OIDC, which is great) ---
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          # Your IAM role ARN for GitHub Actions
           role-to-assume: arn:aws:iam::828411126532:role/github-actions-oidc-role
           aws-region: ${{ env.AWS_REGION }}
 
-      # --- 2. Docker Login ---
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-        
-      # --- 3. Build and Tag Docker Image ---
+
       - name: Build and Tag Docker Image
         run: |
           echo "Building image with tag: ${{ env.IMAGE_TAG }}"
-          # Build the image with the unique tag
           docker build -t ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} .
-          # Tag the image with the full ECR URI
           docker tag ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} \
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-            
-      # --- 4. Push Docker Image to ECR ---
+
       - name: Push Docker Image to ECR
         run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-
 
       - name: Debug Paths
         run: |
@@ -75,8 +62,6 @@ jobs:
           echo "Terraform directory contents:"
           ls -la Terraform || echo "Terraform folder NOT found!"
 
-      # --- 5. Deploy with Terraform ---
-      # Setup Terraform environment
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 

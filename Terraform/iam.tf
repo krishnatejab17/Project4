@@ -1,18 +1,17 @@
 # ECS Task Execution Role
 resource "aws_iam_role" "ecsTaskExecutionRole" {
-  name               = "${var.app_name}-execution-task-role"
+  name               = "project1-execution-task-role"
   assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
 
   tags = {
-    Name        = "${var.app_name}-iam-role"
-    Environment = var.app_environment
+    Name        = "project1-iam-role"
+    Environment = "development"
   }
 }
 
 data "aws_iam_policy_document" "assume_role_policy" {
   statement {
     actions = ["sts:AssumeRole"]
-
     principals {
       type        = "Service"
       identifiers = ["ecs-tasks.amazonaws.com"]
@@ -25,14 +24,14 @@ resource "aws_iam_role_policy_attachment" "ecsTaskExecutionRole_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+# GitHub OIDC Provider
 resource "aws_iam_openid_connect_provider" "github" {
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"] # GitHub OIDC thumbprint
+  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
 }
 
-# OIDC Role for GitHub Actions
-# OIDC Role for GitHub Actions
+# GitHub Actions OIDC Role
 resource "aws_iam_role" "github_actions_oidc_role" {
   name = "github-actions-oidc-role"
 
@@ -48,16 +47,16 @@ resource "aws_iam_role" "github_actions_oidc_role" {
         Condition = {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-          },
+          }
           StringLike = {
-            # Change the condition to match ANY branch or tag within your repository
-            "token.actions.githubusercontent.com:sub" = "repo:krishnatejab17/Project1:*" 
+            "token.actions.githubusercontent.com:sub" = "repo:krishnatejab17/Project1:*"
           }
         }
       }
     ]
   })
 }
+
 resource "aws_iam_role_policy_attachment" "github_actions_oidc_policy" {
   role       = aws_iam_role.github_actions_oidc_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
