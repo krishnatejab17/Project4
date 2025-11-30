@@ -11,8 +11,6 @@ override.tf.json
 .terraformrc
 terraform.rc
 .terragrunt-cache/
-*.tfvars
-*.tfvars.json
 .aws-sam/
 *.zip
 *.jar
