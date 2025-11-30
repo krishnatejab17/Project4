@@ -67,15 +67,15 @@ jobs:
         uses: hashicorp/setup-terraform@v3
 
       - name: Terraform Init
-        working-directory: .Project1
+        working-directory: .
         run: terraform init -input=false
 
       - name: Terraform Plan
-        working-directory: .Project1
+        working-directory: .
         run: terraform plan -input=false -out=tfplan -var-file="terraform.tfvars" -var="image_tag=${{ env.IMAGE_TAG }}"
 
       - name: Terraform Apply
-        working-directory: .Project1
+        working-directory: .
         run: terraform apply -input=false -auto-approve tfplan
 
       - name : Force new deployment of ECS service
