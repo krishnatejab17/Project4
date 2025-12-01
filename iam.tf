@@ -31,6 +31,11 @@ resource "aws_iam_openid_connect_provider" "github" {
   thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
 }
 
+
+
+
+
+
 # GitHub Actions OIDC Role
 resource "aws_iam_role" "github_actions_oidc_role" {
   name = "github-actions-oidc-role"
@@ -49,6 +54,7 @@ resource "aws_iam_role" "github_actions_oidc_role" {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
           StringLike = {
+            # IMPORTANT: This must match your repo
             "token.actions.githubusercontent.com:sub" = "repo:krishnatejab17/Project1:*"
           }
         }
@@ -56,6 +62,176 @@ resource "aws_iam_role" "github_actions_oidc_role" {
     ]
   })
 }
+
+# Terraform + ECS + ECR Permissions
+resource "aws_iam_policy" "github_actions_policy" {
+  name        = "github-actions-terraform-ecs-ecr-policy"
+  description = "Permissions for GitHub Actions to run Terraform and deploy ECS"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+
+      # -------------------------
+      # S3 State Backend Access
+      # -------------------------
+      {
+        Sid    = "AllowS3StateAccess"
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:ListBucket",
+          "s3:GetBucketLocation"
+        ]
+        Resource = [
+          "arn:aws:s3:::project1-terraform-state-bucket",
+          "arn:aws:s3:::project1-terraform-state-bucket/project1/*"
+        ]
+      },
+
+      # -------------------------
+      # DynamoDB Lock Table
+      # -------------------------
+      {
+        Sid    = "AllowDynamoDBStateLocking"
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:UpdateItem"
+        ]
+        Resource = "arn:aws:dynamodb:us-east-1:828411126532:table/project1-terraform-locks"
+      },
+
+      # -------------------------
+      # ECR Full Access (push/pull)
+      # -------------------------
+      {
+        Sid    = "AllowECR"
+        Effect = "Allow"
+        Action = [
+          "ecr:*"
+        ]
+        Resource = "*"
+      },
+
+      # -------------------------
+      # ECS Deployments
+      # -------------------------
+      {
+        Sid    = "AllowECS"
+        Effect = "Allow"
+        Action = [
+          "ecs:*",
+          "iam:PassRole"
+        ]
+        Resource = "*"
+      },
+
+      # -------------------------
+      # CloudWatch Logs (ECS tasks)
+      # -------------------------
+      {
+        Sid    = "AllowCloudWatchLogs"
+        Effect = "Allow"
+        Action = [
+          "logs:*"
+        ]
+        Resource = "*"
+      },
+
+      # -------------------------
+      # Load Balancer, VPC, Subnets, etc (Terraform needs these)
+      # -------------------------
+      {
+        Sid    = "AllowVPCandELB"
+        Effect = "Allow"
+        Action = [
+          "ec2:*",
+          "elasticloadbalancing:*",
+          "autoscaling:*",
+          "application-autoscaling:*"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Attach the Combined Policy
+resource "aws_iam_role_policy_attachment" "github_actions_attach_policy" {
+  role       = aws_iam_role.github_actions_oidc_role.name
+  policy_arn = aws_iam_policy.github_actions_policy.arn
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 resource "aws_iam_role_policy_attachment" "github_actions_oidc_policy" {
   role       = aws_iam_role.github_actions_oidc_role.name
