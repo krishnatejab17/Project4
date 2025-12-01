@@ -13,7 +13,7 @@ resource "aws_lb" "application_load_balancer" {
 
 resource "aws_lb_target_group" "target_group" {
   name        = "${var.app_name}-${var.app_environment}-tg"
-  port        = 80
+  port        = 8080
   protocol    = "HTTP"
   target_type = "ip"   #important for fargate
   vpc_id      = aws_vpc.main.id
