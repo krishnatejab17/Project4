@@ -21,8 +21,12 @@ resource "aws_lb_target_group" "target_group" {
     Name        = "${var.app_name}-lb-tg"
     Environment = var.app_environment
   }
+  health_check {
+      path = "/"
+      port = "8080"
+      protocol = "HTTP"
+    }
 }
-
 resource "aws_lb_listener" "listener" {
   load_balancer_arn = aws_lb.application_load_balancer.id
   port              = "80"
