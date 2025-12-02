@@ -23,12 +23,14 @@ resource "aws_ecs_task_definition" "aws_ecs_task" {
     "portMappings": [
       {
         "containerPort": 8080,
+        "hostPort": 8080,
         "protocol": "tcp"
       }
     ]
   }
 ]
 DEFINITION
+
 }
 
 # ECS Service
