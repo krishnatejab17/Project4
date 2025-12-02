@@ -1,12 +1,10 @@
-script: |
-  from flask import Flask, Response
+from flask import Flask, Response
   
+app = Flask(__name__)
 
-  app = Flask(__name__)
+@app.route('/')
+def hello():
+    return Response("Welcome to T.Kothapalem", mimetype='text/plain')
 
-  @app.route('/')
-  def hello():
-      return Response("Welcome to T.Kothapalem", mimetype='text/plain')
-
-  if __name__ == '__main__':
-      app.run(host='0.0.0.0', port=8080)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080)
