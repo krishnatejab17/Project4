@@ -1,4 +1,50 @@
-# IAM Role for ECS Task Execution
+##############################################
+# GitHub OIDC Provider + Role
+##############################################
+
+# OIDC provider for GitHub Actions
+resource "aws_iam_openid_connect_provider" "github" {
+  url = "https://token.actions.githubusercontent.com"
+
+  client_id_list = ["sts.amazonaws.com"]
+
+  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"] # GitHub OIDC CA thumbprint
+}
+
+# IAM Role for GitHub Actions (OIDC)
+resource "aws_iam_role" "github_actions_oidc_role" {
+  name = "github-actions-oidc-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.github.arn
+        },
+        Action = "sts:AssumeRoleWithWebIdentity",
+        Condition = {
+          StringEquals = {
+            # Replace with your actual GitHub repo and branch
+            "token.actions.githubusercontent.com:sub" = "repo:krishnatejab17/Project1:ref:refs/heads/main"
+          }
+        }
+      }
+    ]
+  })
+}
+
+# Attach your custom combined policy to GitHub Actions role
+resource "aws_iam_role_policy_attachment" "combined_attach" {
+  role       = aws_iam_role.github_actions_oidc_role.name
+  policy_arn = aws_iam_policy.github_actions_policy_combined.arn
+}
+
+##############################################
+# ECS Task Execution Role
+##############################################
+
 resource "aws_iam_role" "ecsTaskExecutionRole" {
   name = "ecsTaskExecutionRole"
 
@@ -22,7 +68,16 @@ resource "aws_iam_role_policy_attachment" "ecsTaskExecutionRole_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Custom combined policy for GitHub Actions + ECS/ECR/Terraform backend
+# Attach your custom combined policy to ECS Task Execution Role
+resource "aws_iam_role_policy_attachment" "ecsTaskExecutionRole_custom" {
+  role       = aws_iam_role.ecsTaskExecutionRole.name
+  policy_arn = aws_iam_policy.github_actions_policy_combined.arn
+}
+
+##############################################
+# Custom Combined Policy
+##############################################
+
 resource "aws_iam_policy" "github_actions_policy_combined" {
   name        = "github-actions-combined-policy"
   description = "Complete permissions for Terraform backend + ECS + ECR deployment"
@@ -111,10 +166,4 @@ resource "aws_iam_policy" "github_actions_policy_combined" {
       }
     ]
   })
-}
-
-# Attach custom policy to ECS Task Execution Role
-resource "aws_iam_role_policy_attachment" "ecsTaskExecutionRole_custom" {
-  role       = aws_iam_role.ecsTaskExecutionRole.name
-  policy_arn = aws_iam_policy.github_actions_policy_combined.arn
 }
