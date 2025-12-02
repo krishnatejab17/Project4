@@ -7,3 +7,8 @@ output "aws_loadbalancer_dns_name" {
 output "ecr_repository_url" {
   value = aws_ecr_repository.aws_ecr.repository_url
 }
+
+
+output "route53_nameservers" {
+  value       = aws_route53_zone.main.name_servers
+}
