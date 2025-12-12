@@ -32,3 +32,6 @@ variable "availability_zones" {
 variable "image_tag" {
   type = string
 }
+variable "github_actions_role_name" {
+  type = string
+}

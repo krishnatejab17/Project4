@@ -27,3 +27,4 @@ app_environment    = "development"
 public_subnets     = ["10.10.0.0/25", "10.10.0.128/25"]
 availability_zones = ["us-east-1a", "us-east-1b"]
 image_tag          = "latest"
+github_actions_role_name = "github-actions-deploy-role"
